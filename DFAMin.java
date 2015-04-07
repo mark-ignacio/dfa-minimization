@@ -2,6 +2,7 @@ import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.*;
+import java.util.Queue;
 
 public class DFAMin {
 
@@ -151,7 +152,7 @@ public class DFAMin {
                     if (D[i][j]) {
                         continue;
                     }
-                    
+
                     DFAState qi = states[i];
                     DFAState qj = states[j];
 
