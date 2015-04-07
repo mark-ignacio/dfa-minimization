@@ -1,9 +1,7 @@
 import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.lang.reflect.Array;
 import java.util.*;
-import java.util.List;
 
 public class DFAMin {
 
@@ -149,9 +147,14 @@ public class DFAMin {
             // 3. mark as possibly indistinguishable, enforce distinguishability
             for (int i = 0; i < states.length; i++) {
                 for (int j = i + 1; j < states.length; j++) {
+                    // only pairs that are as of yet indistinguishable
+                    if (D[i][j]) {
+                        continue;
+                    }
+                    
                     DFAState qi = states[i];
                     DFAState qj = states[j];
-                    
+
                     // one of the things being compared is unreachable
                     if (qi == null || qj == null) {
                         continue;
@@ -160,11 +163,11 @@ public class DFAMin {
                     // helps emulate "for any"
                     boolean distinguished = false;
                     for (int k = 0; k < qi.transitions.size(); k++) {
-                        int qm = qi.transitions.get(k);
-                        int qn = qj.transitions.get(k);
+                        int m = qi.transitions.get(k);
+                        int n = qj.transitions.get(k);
 
                         // if on the same letter, qm and qn move to distinguishable states
-                        if (D[qm][qn] || D[qm][qn]) {
+                        if (D[m][n] || D[n][m]) {
                             dist(i, j);
                             distinguished = true;
                             break;
@@ -174,13 +177,13 @@ public class DFAMin {
                     if (!distinguished) {
                         // qm and qn are indistinguishable
                         for (int k = 0; k < qi.transitions.size(); k++) {
-                            int qm = qi.transitions.get(k);
-                            int qn = qj.transitions.get(k);
+                            int m = qi.transitions.get(k);
+                            int n = qj.transitions.get(k);
 
-                            if (qm < qn && !(i == qm && j == qn)) {
-                                S.get(qm).get(qn).add(new Point(i, j));
-                            } else if (qm > qn && !(i == qn && j == qm)) {
-                                S.get(qn).get(qm).add(new Point(i, j));
+                            if (m < n && !(i == m && j == n)) {
+                                S.get(m).get(n).add(new Point(i, j));
+                            } else if (m > n && !(i == n && j == m)) {
+                                S.get(n).get(m).add(new Point(i, j));
                             }
                         }
                     }
@@ -241,6 +244,9 @@ public class DFAMin {
             for (int i = 0; i < groups.size(); i++) {
                 ArrayList<Integer> group = groups.get(i);
                 for (DFAState state : states) {
+                    if (state == null) {
+                        continue;
+                    }
                     for (int j = 0; j < state.transitions.size(); j++) {
                         Integer val = state.transitions.get(j);
                         if (group.contains(val)) {
@@ -252,27 +258,20 @@ public class DFAMin {
         }
 
         private void dist(int i, int j) {
-            // spoilers, recursion on this is bad
+            _dist(new Point(i, j), new HashSet<Point>());
+        }
+
+        private void _dist(Point point, HashSet<Point> visited) {
+            if (visited.contains(point)) {
+                return;
+            }
+
+            int i = point.x, j = point.y;
             D[i][j] = true;
-
-            // a BFS in a ~different form~
-            HashSet<Point> distinctSet = new HashSet<Point>();
-            Queue<Point> pointQueue = new LinkedList<Point>();
+            visited.add(point);
             for (Point pair : S.get(i).get(j)) {
-                pointQueue.add(pair);
-                distinctSet.add(pair);
+                _dist(pair, visited);
             }
-
-            while (!pointQueue.isEmpty()) {
-                Point pair = pointQueue.remove();
-                D[pair.x][pair.y] = true;
-                for (Point suspicious : S.get(i).get(j)) {
-                    if (!distinctSet.contains(suspicious)) {
-                        pointQueue.add(suspicious);
-                    }
-                }
-            }
-
         }
 
         public void trim() {
