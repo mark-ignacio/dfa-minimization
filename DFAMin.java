@@ -206,7 +206,7 @@ public class DFAMin {
 
                 ArrayList<Integer> toMerge = new ArrayList<Integer>();
                 for (int j = i + 1; j < D.length; j++) {
-                    if (!D[i][j] && !D[j][i]) {
+                    if (!D[i][j]) {
                         toMerge.add(j);
                         merged.put(j, i);
                     }
@@ -230,6 +230,7 @@ public class DFAMin {
 
             renumberStates(mergeGroups);
 
+            // replace attributes
             DFAState[] newStatesArray = new DFAState[newStates.size()];
             newStatesArray = newStates.toArray(newStatesArray);
             states = newStatesArray;
