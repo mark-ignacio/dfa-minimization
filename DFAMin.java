@@ -14,6 +14,7 @@ public class DFAMin {
         ArrayList<DFA> DFAs = new ArrayList<DFA>();
         for (int i = 0; i < numDFAs; i++) {
             DFA automaton = readDFA(inFile);
+            automaton.trim();
             automaton.minimize();
             DFAs.add(automaton);
         }
@@ -72,10 +73,6 @@ public class DFAMin {
             }
         }
 
-        public void minimize() {
-
-        }
-
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
@@ -84,6 +81,38 @@ public class DFAMin {
             formatter.format("%d %d", states.length, alphabet.length);
 
             return sb.toString();
+        }
+
+        public void minimize() {
+
+        }
+
+        public void trim() {
+            // do a BFS for unreachable nodes, cut them out, and renumber accordingly
+            // iterative because why not
+            boolean[] visited = new boolean[states.length];
+            Queue<Integer> visitQueue = new LinkedList<Integer>();
+
+            // init with q0
+            visitQueue.add(0);
+            visited[0] = true;
+            while (!visitQueue.isEmpty()) {
+                int toVisit = visitQueue.remove();
+                DFAState visitingState = states[toVisit];
+                for (int otherState : visitingState.transitions) {
+                    if (!visited[otherState]) {
+                        visitQueue.add(otherState);
+                    }
+                }
+                visited[toVisit] = true;
+            }
+
+            // null out unreachable states
+            for (int i = 0; i < visited.length; i++) {
+                if (!visited[i]) {
+                    states[i] = null;
+                }
+            }
         }
     }
 
