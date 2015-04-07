@@ -89,7 +89,7 @@ public class DFAMin {
             Formatter formatter = new Formatter(sb, Locale.US);
 
             formatter.format("%d %d\n", states.length, alphabet.length);
-            
+
             // accept states
             ArrayList<Integer> acceptable = new ArrayList<Integer>(acceptStates);
             Collections.sort(acceptable);
@@ -98,20 +98,18 @@ public class DFAMin {
                 Integer val = acceptable.get(i);
                 if (i < acceptable.size() - 1) {
                     formatter.format("%d ", val);
-                }
-                else {
+                } else {
                     formatter.format("%d\n", val);
                 }
             }
-            
+
             // states
-            for (DFAState state: states) {
+            for (DFAState state : states) {
                 for (int i = 0; i < state.transitions.size(); i++) {
                     Integer val = state.transitions.get(i);
                     if (i < state.transitions.size() - 1) {
                         formatter.format("%d ", val);
-                    }
-                    else {
+                    } else {
                         formatter.format("%d\n", val);
                     }
                 }
@@ -194,9 +192,10 @@ public class DFAMin {
             // merge states together by smallest equivalent
             ArrayList<DFAState> newStates = new ArrayList<DFAState>();
             HashSet<Integer> newAcceptStates = new HashSet<Integer>();
-            HashSet<Integer> merged = new HashSet<Integer>();
+            HashMap<Integer, Integer> merged = new HashMap<Integer, Integer>();
+            ArrayList<ArrayList<Integer>> mergeGroups = new ArrayList<ArrayList<Integer>>();
             for (int i = 0; i < D.length; i++) {
-                if (merged.contains(i)) {
+                if (merged.get(i) != null || states[i] == null) {
                     continue;
                 }
 
@@ -206,29 +205,65 @@ public class DFAMin {
                 for (int j = i + 1; j < D.length; j++) {
                     if (!D[i][j] && !D[j][i]) {
                         toMerge.add(j);
+                        merged.put(j, i);
+                    }
+                }
+
+                // renumber existing transitions
+                for (int j = 0; j < state.transitions.size(); j++) {
+                    Integer transition = state.transitions.get(j);
+                    if (merged.containsKey(transition)) {
+                        state.transitions.set(j, merged.get(transition));
                     }
                 }
 
                 // merge states (if applicable)
                 for (int mergeState : toMerge) {
                     for (int j : states[mergeState].transitions) {
+                        if (merged.containsKey(j)) {
+                            state.transitions.add(merged.get(j));
+                        }
                         if (!state.transitions.contains(j)) {
                             state.transitions.add(j);
                         }
                     }
 
-                    merged.add(mergeState);
+                    merged.put(mergeState, i);
                 }
                 if (acceptStates.contains(i)) {
                     newAcceptStates.add(i);
                 }
+                toMerge.add(i);
+                mergeGroups.add(toMerge);
                 newStates.add(state);
             }
+
+            renumberStates(mergeGroups);
 
             DFAState[] newStatesArray = new DFAState[newStates.size()];
             newStatesArray = newStates.toArray(newStatesArray);
             states = newStatesArray;
             acceptStates = newAcceptStates;
+        }
+
+        private void renumberStates(ArrayList<ArrayList<Integer>> groups) {
+            int minIndex = 0;
+            for (ArrayList<Integer> group : groups) {
+                int min = group.get(group.size() - 1);
+                
+                // renumbering must occur
+                if (min != minIndex) {
+                    for (DFAState state : states) {
+                        for (int i = 0; i < state.transitions.size(); i++) {
+                            Integer val = state.transitions.get(i);
+                            if (group.contains(val)) {
+                                state.transitions.set(i, minIndex);
+                            }
+                        }
+                    }
+                }
+                minIndex++;
+            }
         }
 
         private void dist(int i, int j) {
@@ -242,11 +277,11 @@ public class DFAMin {
                 pointQueue.add(pair);
                 distinctSet.add(pair);
             }
-            
+
             while (!pointQueue.isEmpty()) {
                 Point pair = pointQueue.remove();
                 D[pair.x][pair.y] = true;
-                for (Point suspicious: S.get(i).get(j)) {
+                for (Point suspicious : S.get(i).get(j)) {
                     if (!distinctSet.contains(suspicious)) {
                         pointQueue.add(suspicious);
                     }
@@ -256,7 +291,7 @@ public class DFAMin {
         }
 
         public void trim() {
-            // do a BFS for unreachable nodes, cut them out, and renumber accordingly
+            // do a BFS for unreachable nodes, cut them out
             // iterative because why not
             boolean[] visited = new boolean[states.length];
             Queue<Integer> visitQueue = new LinkedList<Integer>();
