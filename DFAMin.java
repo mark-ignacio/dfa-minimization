@@ -131,6 +131,7 @@ public class DFAMin {
 
                 //noinspection ForLoopReplaceableByForEach
                 for (int j = 0; j < states.length; j++) {
+                    Arrays.fill(D[i], false);
                     innerList.add(new HashSet<Point>());
                 }
                 S.add(innerList);
@@ -150,6 +151,11 @@ public class DFAMin {
                 for (int j = i + 1; j < states.length; j++) {
                     DFAState qi = states[i];
                     DFAState qj = states[j];
+                    
+                    // one of the things being compared is unreachable
+                    if (qi == null || qj == null) {
+                        continue;
+                    }
 
                     // helps emulate "for any"
                     boolean distinguished = false;
@@ -161,9 +167,6 @@ public class DFAMin {
                         if (D[qm][qn] || D[qm][qn]) {
                             dist(i, j);
                             distinguished = true;
-                        }
-
-                        if (distinguished) {
                             break;
                         }
                     }
@@ -175,9 +178,9 @@ public class DFAMin {
                             int qn = qj.transitions.get(k);
 
                             if (qm < qn && !(i == qm && j == qn)) {
-                                S.get(qm).get(qn).add(new Point(qm, qn));
+                                S.get(qm).get(qn).add(new Point(i, j));
                             } else if (qm > qn && !(i == qn && j == qm)) {
-                                S.get(qn).get(qm).add(new Point(qn, qm));
+                                S.get(qn).get(qm).add(new Point(i, j));
                             }
                         }
                     }
@@ -217,19 +220,6 @@ public class DFAMin {
                     }
                 }
 
-                // merge states (if applicable)
-                for (int mergeState : toMerge) {
-                    for (int j : states[mergeState].transitions) {
-                        if (merged.containsKey(j)) {
-                            state.transitions.add(merged.get(j));
-                        }
-                        if (!state.transitions.contains(j)) {
-                            state.transitions.add(j);
-                        }
-                    }
-
-                    merged.put(mergeState, i);
-                }
                 if (acceptStates.contains(i)) {
                     newAcceptStates.add(i);
                 }
@@ -247,22 +237,16 @@ public class DFAMin {
         }
 
         private void renumberStates(ArrayList<ArrayList<Integer>> groups) {
-            int minIndex = 0;
-            for (ArrayList<Integer> group : groups) {
-                int min = group.get(group.size() - 1);
-                
-                // renumbering must occur
-                if (min != minIndex) {
-                    for (DFAState state : states) {
-                        for (int i = 0; i < state.transitions.size(); i++) {
-                            Integer val = state.transitions.get(i);
-                            if (group.contains(val)) {
-                                state.transitions.set(i, minIndex);
-                            }
+            for (int i = 0; i < groups.size(); i++) {
+                ArrayList<Integer> group = groups.get(i);
+                for (DFAState state : states) {
+                    for (int j = 0; j < state.transitions.size(); j++) {
+                        Integer val = state.transitions.get(j);
+                        if (group.contains(val)) {
+                            state.transitions.set(j, i);
                         }
                     }
                 }
-                minIndex++;
             }
         }
 
