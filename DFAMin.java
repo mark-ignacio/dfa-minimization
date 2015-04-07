@@ -1,17 +1,15 @@
 import java.awt.*;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.Queue;
 
 public class DFAMin {
 
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) {
         new DFAMin();
     }
 
-    public DFAMin() throws FileNotFoundException {
-        Scanner inFile = new Scanner(new File("sample.in"));
+    public DFAMin() {
+        Scanner inFile = new Scanner(System.in);
         int numDFAs = Integer.parseInt(inFile.nextLine());
         ArrayList<DFA> DFAs = new ArrayList<DFA>();
         for (int i = 0; i < numDFAs; i++) {
