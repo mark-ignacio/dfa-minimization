@@ -231,7 +231,7 @@ public class DFAMin {
                 newStates.add(state);
             }
 
-            renumberStates(mergeGroups);
+            renumberStates(mergeGroups, newAcceptStates);
 
             // replace attributes
             DFAState[] newStatesArray = new DFAState[newStates.size()];
@@ -240,7 +240,7 @@ public class DFAMin {
             acceptStates = newAcceptStates;
         }
 
-        private void renumberStates(ArrayList<ArrayList<Integer>> groups) {
+        private void renumberStates(ArrayList<ArrayList<Integer>> groups, HashSet<Integer> newAcceptStates) {
             for (int i = 0; i < groups.size(); i++) {
                 ArrayList<Integer> group = groups.get(i);
                 for (DFAState state : states) {
@@ -252,6 +252,12 @@ public class DFAMin {
                         if (group.contains(val)) {
                             state.transitions.set(j, i);
                         }
+                    }
+                }
+                for (Integer state : new HashSet<Integer>(newAcceptStates)) {
+                    if (group.contains(state)) {
+                        newAcceptStates.remove(state);
+                        newAcceptStates.add(i);
                     }
                 }
             }
