@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.lang.reflect.Array;
 import java.util.*;
+import java.util.List;
 
 public class DFAMin {
 
@@ -46,9 +47,9 @@ public class DFAMin {
         DFAState[] states = new DFAState[numStates];
         for (int i = 0; i < numStates; i++) {
             line = inFile.nextLine().split(" ");
-            int[] transitions = new int[line.length];
-            for (int j = 0; j < line.length; j++) {
-                transitions[j] = Integer.parseInt(line[j]);
+            ArrayList<Integer> transitions = new ArrayList<Integer>();
+            for (String num : line) {
+                transitions.add(Integer.parseInt(num));
             }
 
             DFAState state = new DFAState(transitions);
@@ -87,7 +88,34 @@ public class DFAMin {
             StringBuilder sb = new StringBuilder();
             Formatter formatter = new Formatter(sb, Locale.US);
 
-            formatter.format("%d %d", states.length, alphabet.length);
+            formatter.format("%d %d\n", states.length, alphabet.length);
+            
+            // accept states
+            ArrayList<Integer> acceptable = new ArrayList<Integer>(acceptStates);
+            Collections.sort(acceptable);
+            formatter.format("%d ", acceptable.size());
+            for (int i = 0; i < acceptable.size(); i++) {
+                Integer val = acceptable.get(i);
+                if (i < acceptable.size() - 1) {
+                    formatter.format("%d ", val);
+                }
+                else {
+                    formatter.format("%d\n", val);
+                }
+            }
+            
+            // states
+            for (DFAState state: states) {
+                for (int i = 0; i < state.transitions.size(); i++) {
+                    Integer val = state.transitions.get(i);
+                    if (i < state.transitions.size() - 1) {
+                        formatter.format("%d ", val);
+                    }
+                    else {
+                        formatter.format("%d\n", val);
+                    }
+                }
+            }
 
             return sb.toString();
         }
@@ -99,9 +127,11 @@ public class DFAMin {
             D = new boolean[states.length][states.length];
             S = new ArrayList<ArrayList<HashSet<Point>>>();  // lol
 
+            //noinspection ForLoopReplaceableByForEach
             for (int i = 0; i < states.length; i++) {
                 ArrayList<HashSet<Point>> innerList = new ArrayList<HashSet<Point>>();
 
+                //noinspection ForLoopReplaceableByForEach
                 for (int j = 0; j < states.length; j++) {
                     innerList.add(new HashSet<Point>());
                 }
@@ -125,9 +155,9 @@ public class DFAMin {
 
                     // helps emulate "for any"
                     boolean distinguished = false;
-                    for (int k = 0; k < qi.transitions.length; k++) {
-                        int qm = qi.transitions[k];
-                        int qn = qj.transitions[k];
+                    for (int k = 0; k < qi.transitions.size(); k++) {
+                        int qm = qi.transitions.get(k);
+                        int qn = qj.transitions.get(k);
 
                         // if on the same letter, qm and qn move to distinguishable states
                         if (D[qm][qn] || D[qm][qn]) {
@@ -142,9 +172,9 @@ public class DFAMin {
 
                     if (!distinguished) {
                         // qm and qn are indistinguishable
-                        for (int k = 0; k < qi.transitions.length; k++) {
-                            int qm = qi.transitions[k];
-                            int qn = qj.transitions[k];
+                        for (int k = 0; k < qi.transitions.size(); k++) {
+                            int qm = qi.transitions.get(k);
+                            int qn = qj.transitions.get(k);
 
                             if (qm < qn && !(i == qm && j == qn)) {
                                 S.get(qm).get(qn).add(new Point(qm, qn));
@@ -157,16 +187,70 @@ public class DFAMin {
                 }
             }
 
+            mergeStates();
+        }
 
+        private void mergeStates() {
+            // merge states together by smallest equivalent
+            ArrayList<DFAState> newStates = new ArrayList<DFAState>();
+            HashSet<Integer> newAcceptStates = new HashSet<Integer>();
+            HashSet<Integer> merged = new HashSet<Integer>();
+            for (int i = 0; i < D.length; i++) {
+                if (merged.contains(i)) {
+                    continue;
+                }
+
+                DFAState state = states[i];
+
+                ArrayList<Integer> toMerge = new ArrayList<Integer>();
+                for (int j = i + 1; j < D.length; j++) {
+                    if (!D[i][j] && !D[j][i]) {
+                        toMerge.add(j);
+                    }
+                }
+
+                // merge states (if applicable)
+                for (int mergeState : toMerge) {
+                    for (int j : states[mergeState].transitions) {
+                        if (!state.transitions.contains(j)) {
+                            state.transitions.add(j);
+                        }
+                    }
+
+                    merged.add(mergeState);
+                }
+                if (acceptStates.contains(i)) {
+                    newAcceptStates.add(i);
+                }
+                newStates.add(state);
+            }
+
+            DFAState[] newStatesArray = new DFAState[newStates.size()];
+            newStatesArray = newStates.toArray(newStatesArray);
+            states = newStatesArray;
+            acceptStates = newAcceptStates;
         }
 
         private void dist(int i, int j) {
+            // spoilers, recursion on this is bad
             D[i][j] = true;
 
-            HashSet<Point> sSet = S.get(i).get(j);
-            for (Point pair : sSet) {
-                sSet.remove(pair);
-                dist(pair.x, pair.y);
+            // a BFS in a ~different form~
+            HashSet<Point> distinctSet = new HashSet<Point>();
+            Queue<Point> pointQueue = new LinkedList<Point>();
+            for (Point pair : S.get(i).get(j)) {
+                pointQueue.add(pair);
+                distinctSet.add(pair);
+            }
+            
+            while (!pointQueue.isEmpty()) {
+                Point pair = pointQueue.remove();
+                D[pair.x][pair.y] = true;
+                for (Point suspicious: S.get(i).get(j)) {
+                    if (!distinctSet.contains(suspicious)) {
+                        pointQueue.add(suspicious);
+                    }
+                }
             }
 
         }
@@ -202,9 +286,9 @@ public class DFAMin {
 
     // pretty much a node in a directed graph
     private class DFAState {
-        public int[] transitions;
+        public ArrayList<Integer> transitions;
 
-        public DFAState(int[] transitions) {
+        public DFAState(ArrayList<Integer> transitions) {
             this.transitions = transitions;
         }
     }
